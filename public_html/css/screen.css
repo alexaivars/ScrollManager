@@ -1,0 +1,10 @@
+html, body, #main, .scroll-block {
+  width: 100%; }
+
+#main {
+  border: 1px solid #FF0;
+  height: 10000px; }
+
+.scroll-block {
+  height: 300px;
+  border: 1px solid red; }
