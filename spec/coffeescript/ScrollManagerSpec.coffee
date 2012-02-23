@@ -34,15 +34,16 @@ describe 'ScrollManager', ->
       expect( manager.blocks()[1].top() ).toEqual( 200 )
       expect( manager.blocks()[2].top() ).toEqual( 400 )
     
-    
+   
+    ###
     it 'should be able to scroll blocks', ->
       manager.rebuildScrollTable()
       for i in [-100..100]
-        manager.scroll(i)
+        manager.blockScroll(i)
         expect( manager.blocks()[0].top() ).toEqual( i )
         expect( manager.blocks()[1].top() ).toEqual( i + 200 )
         expect( manager.blocks()[2].top() ).toEqual( i + 400 )
-
+    ###
     
     it 'should be able to scroll blocks according to individual blocks scroll length', ->
       manager.rebuildScrollTable()
@@ -93,4 +94,10 @@ describe 'ScrollManager', ->
       manager.pageScroll( 2200 + 1 )
       expect( last.top() ).toEqual( -1200 - 1)
 
-      
+    ###
+    it 'should set block transistion value', ->
+      manager.rebuildScrollTable()
+      for i in [0..1]
+        manager.blockScroll(i)
+        expect( manager.blocks()[0].transition() ).toEqual( 0.02 )
+    ###

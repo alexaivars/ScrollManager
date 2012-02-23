@@ -32,23 +32,44 @@
       block = new ScrollBlock($elm)
       return
 
-    it 'should be able to set the height', ->
+    it 'should be able to set and get the height', ->
       expect( block.height(-1) ).toEqual(0) # height can not be negativ
       expect( block.height(1) ).toEqual(1)
       expect( block.height(0) ).toEqual(0)
       return
 
-    it 'should be able to set the scroll length', ->
+    it 'should be able to set and get the scroll length', ->
       expect( block.scroll(-1) ).toEqual(0) # scroll length can not be negativ
       expect( block.scroll(1) ).toEqual(1)
       expect( block.scroll(0) ).toEqual(0)
       return
     
-    it 'should be able to top position', ->
+    it 'should be able to set and get the top position', ->
       expect( block.top(-1) ).toEqual(-1)
       expect( block.top(0) ).toEqual(0)
       expect( block.top(1) ).toEqual(1)
       return
+    
+    it 'should be able to set and the current transition', ->
+      expect( block.transition(-1) ).toEqual(0)
+      expect( block.transition(0) ).toEqual(0)
+      expect( block.transition(0.5) ).toEqual(0.5)
+      expect( block.transition(1) ).toEqual(1)
+      expect( block.transition(2) ).toEqual(1)
+      return
+    
+    
+    it 'should be able to pass dist to top set transition progress', ->
+      
+      block = new ScrollBlock sandbox({
+        "data-scroll":"50"
+        "style":"width:100px; height:100px;"
+      })
+
+      for i in [0..50]
+        block.top(0,i)
+        expect( block.transition().toFixed(4) ).toEqual( (0.02 * i).toFixed(4) )
+    
 
 
 

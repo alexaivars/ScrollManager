@@ -34,20 +34,40 @@
       $elm.appendTo('body');
       block = new ScrollBlock($elm);
     });
-    it('should be able to set the height', function() {
+    it('should be able to set and get the height', function() {
       expect(block.height(-1)).toEqual(0);
       expect(block.height(1)).toEqual(1);
       expect(block.height(0)).toEqual(0);
     });
-    it('should be able to set the scroll length', function() {
+    it('should be able to set and get the scroll length', function() {
       expect(block.scroll(-1)).toEqual(0);
       expect(block.scroll(1)).toEqual(1);
       expect(block.scroll(0)).toEqual(0);
     });
-    return it('should be able to top position', function() {
+    it('should be able to set and get the top position', function() {
       expect(block.top(-1)).toEqual(-1);
       expect(block.top(0)).toEqual(0);
       expect(block.top(1)).toEqual(1);
+    });
+    it('should be able to set and the current transition', function() {
+      expect(block.transition(-1)).toEqual(0);
+      expect(block.transition(0)).toEqual(0);
+      expect(block.transition(0.5)).toEqual(0.5);
+      expect(block.transition(1)).toEqual(1);
+      expect(block.transition(2)).toEqual(1);
+    });
+    return it('should be able to pass dist to top set transition progress', function() {
+      var i, _results;
+      block = new ScrollBlock(sandbox({
+        "data-scroll": "50",
+        "style": "width:100px; height:100px;"
+      }));
+      _results = [];
+      for (i = 0; i <= 50; i++) {
+        block.top(0, i);
+        _results.push(expect(block.transition().toFixed(4)).toEqual((0.02 * i).toFixed(4)));
+      }
+      return _results;
     });
   });
 }).call(this);
