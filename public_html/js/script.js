@@ -41,6 +41,41 @@
       return -1;
     };
   }
+  if (!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function(searchElement) {
+      "use strict";      var k, len, n, t;
+      if (typeof this === "undefined" || this === null) {
+        throw new TypeError();
+      }
+      t = Object(this);
+      len = t.length >>> 0;
+      if (len === 0) {
+        return -1;
+      }
+      n = 0;
+      if (arguments.length > 0) {
+        n = Number(arguments[1]);
+        if (n !== n) {
+          n = 0;
+        } else {
+          if (n !== 0 && n !== Infinity && n !== -Infinity) {
+            n = (n > 0 || -1) * Math.floor(Math.abs(n));
+          }
+        }
+      }
+      if (n >= len) {
+        return -1;
+      }
+      k = (n >= 0 ? n : Math.max(len - Math.abs(n), 0));
+      while (k < len) {
+        if (k in t && t[k] === searchElement) {
+          return k;
+        }
+        k++;
+      }
+      return -1;
+    };
+  }
   ScrollBlock = (function() {
     ScrollBlock.prototype.$container = null;
     function ScrollBlock(elm) {
@@ -104,11 +139,24 @@
     ScrollManager.prototype.scrollTable = [];
     ScrollManager.prototype.scrollValue = 0;
     function ScrollManager() {
-      var _blocks, _dist;
+      var _blocks, _container, _dist;
+      _container = void 0;
+      this.container = function() {
+        if (_container === void 0) {
+          _container = $("<div class='scroll-manager'></div>");
+          _container.css({
+            height: $(window).height()
+          });
+          _container.appendTo($('body'));
+        }
+        return _container;
+      };
       _blocks = [];
       this.blocks = function(block) {
         if (block && block instanceof ScrollBlock) {
-          return _blocks.push(block);
+          _blocks.push(block);
+          block.$container.appendTo(this.container());
+          return this.container().height(block.height() + block.scroll() + this.container().height());
         } else if (block) {
           throw new TypeError("expected ScrollBlock object");
         } else {

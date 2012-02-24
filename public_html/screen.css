@@ -6,5 +6,5 @@ html, body, #main, .scroll-block {
   height: 10000px; }
 
 .scroll-block {
-  height: 300px;
+  height: 600px;
   border: 1px solid red; }

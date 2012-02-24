@@ -1,11 +1,8 @@
 html, body, #main, .scroll-block {
   width: 100%; }
-html {
-  font-size: 6em }
 
 #main {
-  border: 1px solid #FF0;
-  height: 5000px; }
+  border: 1px solid #FF0; }
 
 .scroll-block {
   height: 200px;

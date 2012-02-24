@@ -3,13 +3,16 @@
 # Utils
 #
 ################################################################################
+## Make sure we use our preffered jQuery short hand.
 $ = jQuery
 
+## Because we are lazy and like to console log.
 window.console ?=
   log:->
     return
 
-## For IE! 
+## Mostly for our IE users
+## https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/lastIndexOf
 unless Array::lastIndexOf
   Array::lastIndexOf = (searchElement) ->
     "use strict"
@@ -27,6 +30,28 @@ unless Array::lastIndexOf
     while k >= 0
       return k  if k of t and t[k] is searchElement
       k--
+    -1
+
+## Mostly for our IE users
+## https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+unless Array::indexOf
+  Array::indexOf = (searchElement) ->
+    "use strict"
+    throw new TypeError()  unless this?
+    t = Object(this)
+    len = t.length >>> 0
+    return -1  if len is 0
+    n = 0
+    if arguments.length > 0
+      n = Number(arguments[1])
+      unless n is n
+        n = 0
+      else n = (n > 0 or -1) * Math.floor(Math.abs(n))  if n isnt 0 and n isnt Infinity and n isnt -Infinity
+    return -1  if n >= len
+    k = (if n >= 0 then n else Math.max(len - Math.abs(n), 0))
+    while k < len
+      return k  if k of t and t[k] is searchElement
+      k++
     -1
 
 ################################################################################
@@ -101,11 +126,22 @@ class ScrollManager
   scrollTable: []
   scrollValue: 0
   constructor: () ->
-    
+    _container = undefined
+    @container = () ->
+      if _container == undefined
+        _container = $("<div class='scroll-manager'></div>")
+        _container.css({
+          height: $(window).height()
+        })
+        _container.appendTo( $('body') )
+      return _container
 
     _blocks = []
     @blocks = (block) ->
-      if block && block instanceof ScrollBlock then _blocks.push block
+      if block && block instanceof ScrollBlock
+        _blocks.push block
+        block.$container.appendTo( @container() )
+        @container().height( block.height() + block.scroll() + @container().height() )
       else if block then throw new TypeError("expected ScrollBlock object")
       else return _blocks
 
