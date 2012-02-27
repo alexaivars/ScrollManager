@@ -2,8 +2,9 @@ html, body, #main, .scroll-block {
   width: 100%; }
 
 #main {
-  border: 1px solid #FF0; }
+  width: 100%; }
 
 .scroll-block {
   height: 200px;
+  width: 100%;
   border: 1px solid red; }

@@ -87,7 +87,6 @@ ScrollBlock = (function() {
     this.$container.css({
       position: "fixed",
       display: "block",
-      width: this.$container.width(),
       height: this.$container.height()
     });
     _scroll = this.$container.data("scroll");
@@ -111,12 +110,8 @@ ScrollBlock = (function() {
       this.$container.css({
         top: y
       });
-      if (o !== void 0 && y === 0) {
+      if (o !== void 0) {
         this.transition(o / this.scroll());
-      } else if (y < 0) {
-        this.transition(1);
-      } else {
-        this.transition(0);
       }
     }
     return this.$container.position().top;
@@ -135,16 +130,30 @@ ScrollBlock = (function() {
   return ScrollBlock;
 })();
 ScrollManager = (function() {
-  ScrollManager.prototype.scrollTable = [];
-  ScrollManager.prototype.scrollValue = 0;
-  function ScrollManager() {
-    var _blocks, _container, _dist;
+  ScrollManager.ALIGN_CENTER = "center";
+  ScrollManager.ALIGN_TOP = "top";
+  ScrollManager.WINDOW_HEIGHT = -1;
+  ScrollManager.prototype.scrollTable = void 0;
+  ScrollManager.prototype.scrollValue = void 0;
+  ScrollManager.prototype.options = void 0;
+  function ScrollManager(options) {
+    var index, _blocks, _container, _dist;
+    this.options = {
+      align: ScrollManager.ALIGN_TOP,
+      debug: false
+    };
+    for (index in this.options) {
+      if (options && typeof options[index] !== "undefined") {
+        this.options[index] = options[index];
+      }
+    }
+    ScrollManager.WINDOW_HEIGHT = $(window).height();
     _container = void 0;
     this.container = function() {
       if (_container === void 0) {
         _container = $("<div class='scroll-manager'></div>");
         _container.css({
-          height: $(window).height()
+          height: ScrollManager.WINDOW_HEIGHT
         });
         _container.appendTo($('body'));
       }
@@ -155,7 +164,7 @@ ScrollManager = (function() {
       if (block && block instanceof ScrollBlock) {
         _blocks.push(block);
         block.$container.appendTo(this.container());
-        return this.container().height(block.height() + block.scroll() + this.container().height());
+        return this.setHeight();
       } else if (block) {
         throw new TypeError("expected ScrollBlock object");
       } else {
@@ -185,61 +194,126 @@ ScrollManager = (function() {
       block = _ref2[_i];
       this.blocks(new ScrollBlock(block));
     }
-    this.rebuildScrollTable();
-    this.blockScroll(0);
     $(window).scroll(__bind(function(event) {
       return this.onWindowScroll(event);
     }, this));
+    $(window).resize(__bind(function(event) {
+      return this.onWindowResize(event);
+    }, this));
+    $(window).resize();
   };
-  ScrollManager.prototype.rebuildScrollTable = function() {
-    var block, h, i, s, y, _i, _len, _ref2;
-    this.scrollTable = [];
-    y = 0;
+  ScrollManager.prototype.setHeight = function() {
+    var block, _height, _i, _len, _ref2;
+    _height = 0;
     _ref2 = this.blocks();
     for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
       block = _ref2[_i];
-      s = block.scroll();
-      h = block.height();
-      for (i = 1; 1 <= s ? i <= s : i >= s; 1 <= s ? i++ : i--) {
-        this.scrollTable.push(y);
+      _height += block.height() + block.scroll();
+    }
+    if (this.blocks()[this.blocks().length - 1]) {
+      _height -= this.blocks()[this.blocks().length - 1].height();
+    }
+    _height += ScrollManager.WINDOW_HEIGHT;
+    return this.container().height(_height);
+  };
+  ScrollManager.prototype.rebuildScrollTable = function() {
+    var block, f, h, i, s, y, _i, _j, _len, _len2, _ref2, _ref3;
+    if (this.options.align === ScrollManager.ALIGN_CENTER) {
+      this.scrollTable = [];
+      y = Math.round(ScrollManager.WINDOW_HEIGHT * 0.5);
+      f = true;
+      _ref2 = this.blocks();
+      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+        block = _ref2[_i];
+        s = block.scroll();
+        h = block.height() * 0.5;
+        if (f !== true) {
+          for (i = 1; 1 <= h ? i <= h : i >= h; 1 <= h ? i++ : i--) {
+            this.scrollTable.push(y - i + 1);
+          }
+        }
+        for (i = 1; 1 <= s ? i <= s : i >= s; 1 <= s ? i++ : i--) {
+          this.scrollTable.push(y - h);
+        }
+        for (i = 1; 1 <= h ? i <= h : i >= h; 1 <= h ? i++ : i--) {
+          this.scrollTable.push(y - i + 1 - h);
+        }
+        y -= h * 2;
+        f = false;
       }
-      for (i = 1; 1 <= h ? i <= h : i >= h; 1 <= h ? i++ : i--) {
-        this.scrollTable.push(y - i + 1);
+    } else {
+      this.scrollTable = [];
+      y = 0;
+      _ref3 = this.blocks();
+      for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+        block = _ref3[_j];
+        s = block.scroll();
+        h = block.height();
+        for (i = 1; 1 <= s ? i <= s : i >= s; 1 <= s ? i++ : i--) {
+          this.scrollTable.push(y);
+        }
+        for (i = 1; 1 <= h ? i <= h : i >= h; 1 <= h ? i++ : i--) {
+          this.scrollTable.push(y - i + 1);
+        }
+        y -= h;
       }
-      y -= h;
     }
   };
   ScrollManager.prototype.render = function() {
-    var block, y, _i, _len, _ref2;
-    y = this.blockScroll();
-    _ref2 = this.blocks();
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      block = _ref2[_i];
-      block.top(y, this.pageDist());
-      y += block.height();
+    var block, c, y, _i, _j, _len, _len2, _ref2, _ref3;
+    y = this.scrollValue;
+    c = Math.round(ScrollManager.WINDOW_HEIGHT * 0.5);
+    if (this.options.align === ScrollManager.ALIGN_CENTER) {
+      _ref2 = this.blocks();
+      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+        block = _ref2[_i];
+        if (y < c - block.height() * 0.5) {
+          block.top(y, block.scroll());
+        } else if (y === c - block.height() * 0.5) {
+          block.top(y, this.pageDist());
+        } else {
+          block.top(y, 0);
+        }
+        y += block.height();
+      }
+    } else {
+      _ref3 = this.blocks();
+      for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
+        block = _ref3[_j];
+        if (y < 0) {
+          block.top(y, block.scroll());
+        } else if (y === 0) {
+          block.top(y, this.pageDist());
+        } else {
+          block.top(y, 0);
+        }
+        y += block.height();
+      }
     }
-  };
-  ScrollManager.prototype.blockScroll = function(y) {
-    if (y !== void 0) {
-      this.scrollValue = y;
-      this.render();
-    }
-    return this.scrollValue;
   };
   ScrollManager.prototype.pageScroll = function(y) {
     var x;
     if (y === void 0) {
       y = $(window).scrollTop();
     }
+    y = Math.max(0, y);
     if (y < 0 || y > this.scrollTable.length) {
-      this.blockScroll(-y);
+      this.scrollValue = -y;
     } else {
       x = this.scrollTable[y];
-      this.pageDist(y);
-      this.blockScroll(x);
+      this.scrollValue = x;
     }
+    this.pageDist(y);
+    this.render();
   };
   ScrollManager.prototype.onWindowScroll = function() {
+    this.pageScroll($(window).scrollTop());
+  };
+  ScrollManager.prototype.onWindowResize = function() {
+    ScrollManager.WINDOW_HEIGHT = $(window).height();
+    this.container().width($(window).width());
+    this.setHeight();
+    this.rebuildScrollTable();
     this.pageScroll($(window).scrollTop());
   };
   ScrollManager.prototype.onActivated = function(e) {};

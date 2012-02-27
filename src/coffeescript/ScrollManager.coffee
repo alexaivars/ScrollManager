@@ -60,6 +60,7 @@ unless Array::indexOf
 #
 ################################################################################
 class ScrollBlock
+
   $container: null
   
   constructor: (elm) ->
@@ -74,7 +75,7 @@ class ScrollBlock
     @$container.css({
       position:"fixed"
       display:"block"
-      width:@$container.width()
+      # width:@$container.width()
       height:@$container.height()
       # top: $(window).height()
     })
@@ -98,12 +99,8 @@ class ScrollBlock
   top: (y,o) ->
     if y != undefined
       @$container.css { top: y }
-      if o != undefined && y == 0
+      if o != undefined
         @transition o / @scroll()
-      else if y < 0
-        @transition 1
-      else
-        @transition 0
     return @$container.position().top
 
   height: (height) ->
@@ -123,15 +120,29 @@ class ScrollBlock
 ################################################################################
 class ScrollManager
   
-  scrollTable: []
-  scrollValue: 0
-  constructor: () ->
+  @ALIGN_CENTER: "center"
+  @ALIGN_TOP: "top"
+  @WINDOW_HEIGHT: -1
+
+  scrollTable: undefined
+  scrollValue: undefined
+  options: undefined
+
+  constructor: (options) ->
+    @options =
+      align: ScrollManager.ALIGN_TOP
+      debug: false
+
+    for index of @options
+      @options[index] = options[index]  if options and typeof options[index] isnt "undefined"
+
+    ScrollManager.WINDOW_HEIGHT = $(window).height()
     _container = undefined
     @container = () ->
       if _container == undefined
         _container = $("<div class='scroll-manager'></div>")
         _container.css({
-          height: $(window).height()
+          height: ScrollManager.WINDOW_HEIGHT
         })
         _container.appendTo( $('body') )
       return _container
@@ -141,7 +152,7 @@ class ScrollManager
       if block && block instanceof ScrollBlock
         _blocks.push block
         block.$container.appendTo( @container() )
-        @container().height( block.height() + block.scroll() + @container().height() )
+        @setHeight()
       else if block then throw new TypeError("expected ScrollBlock object")
       else return _blocks
 
@@ -151,7 +162,7 @@ class ScrollManager
         x = @scrollTable[y]
         a = @scrollTable.indexOf(x)
         b = @scrollTable.lastIndexOf(x)
-        
+        # console.log y + ":" + x + ":" + a + ":" + b
         if( a != b )
           _dist = y - a
         else
@@ -164,29 +175,58 @@ class ScrollManager
     for block in $('#main').find(".scroll-block")
       @blocks new ScrollBlock(block)
    
-    @rebuildScrollTable()
-    @blockScroll(0)
     
     # add event listners
     $(window).scroll (event) => @onWindowScroll(event)
-
+    $(window).resize (event) => @onWindowResize(event)
+    $(window).resize()
     # add singal listners
     # for block in @blocks
     # @blocks[0].activated.add (target) => @onActivated()
 
     return
+  setHeight: () ->
+    _height = 0
+    for block in @blocks()
+      _height += block.height() + block.scroll()
+    _height -= @blocks()[@blocks().length - 1].height() if @blocks()[@blocks().length - 1]
+    _height += ScrollManager.WINDOW_HEIGHT
+    @container().height( _height )
 
   rebuildScrollTable: () ->
-    @scrollTable = []
-    y = 0
-    for block in @blocks()
-      s = block.scroll()
-      h = block.height()
-      for i in [1..s]
-        @scrollTable.push y
-      for i in [1..h]
-        @scrollTable.push y - i + 1
-      y -= h
+    if @options.align == ScrollManager.ALIGN_CENTER
+      @scrollTable = []
+      y = Math.round( ScrollManager.WINDOW_HEIGHT * 0.5 )
+      f = true
+      for block in @blocks()
+        s = block.scroll()
+        h = block.height() * 0.5
+        if f != true then for i in [1..h]
+          @scrollTable.push y - i + 1
+          # console.log "I" + (@scrollTable.length - 1) + ":" + @scrollTable[ @scrollTable.length - 1]
+        for i in [1..s]
+          @scrollTable.push y - h
+          # console.log "S" + (@scrollTable.length - 1) + ":" + @scrollTable[ @scrollTable.length - 1]
+        for i in [1..h]
+          @scrollTable.push y - i + 1 - h
+          # console.log "O" + (@scrollTable.length - 1) + ":" + @scrollTable[ @scrollTable.length - 1]
+        y -= h * 2
+        f = false
+        
+      # for i,n in @scrollTable
+      #  console.log n + ":" + i
+    else
+      @scrollTable = []
+      y = 0
+      for block in @blocks()
+        s = block.scroll()
+        h = block.height()
+        for i in [1..s]
+          @scrollTable.push y
+        for i in [1..h]
+          @scrollTable.push y - i + 1
+        y -= h
+      
 
     # p = 0
     # for i in @scrollTable
@@ -195,32 +235,54 @@ class ScrollManager
     return
   
   render:() ->
-    y = @blockScroll()
-    for block in @blocks()
-      block.top(y,@pageDist())
-      y += block.height()
+    y = @scrollValue
+    c = Math.round( ScrollManager.WINDOW_HEIGHT * 0.5 )
+
+    if @options.align == ScrollManager.ALIGN_CENTER
+      for block in @blocks()
+        if y < c - block.height() * 0.5
+          block.top(y,block.scroll())
+        else if y == c - block.height() * 0.5
+          block.top(y,@pageDist())
+        else
+          block.top(y,0)
+        y += block.height()
+    else
+      for block in @blocks()
+        if y < 0
+          block.top(y,block.scroll())
+        else if y == 0
+          block.top(y,@pageDist())
+        else
+          block.top(y,0)
+        y += block.height()
+
     return
-
-  blockScroll:(y) ->
-    if y != undefined
-      @scrollValue = y
-      @render()
-    return @scrollValue
-
   
   pageScroll:(y) ->
     if y == undefined
       y = $(window).scrollTop()
-
+    
+    y = Math.max( 0, y )
     if y < 0 || y > @scrollTable.length
-      @blockScroll -y
+      @scrollValue = -y
     else
       x = @scrollTable[y]
-      @pageDist y
-      @blockScroll x
+      @scrollValue =  x
+    
+    @pageDist y
+    @render()
     return
 
   onWindowScroll:() ->
+    @pageScroll $(window).scrollTop()
+    return
+
+  onWindowResize:() ->
+    ScrollManager.WINDOW_HEIGHT = $(window).height()
+    @container().width( $(window).width() )
+    @setHeight()
+    @rebuildScrollTable()
     @pageScroll $(window).scrollTop()
     return
 
