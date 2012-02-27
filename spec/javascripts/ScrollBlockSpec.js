@@ -1,4 +1,5 @@
 (function() {
+
   describe('ScrollBlock object constrution', function() {
     var block;
     block = void 0;
@@ -25,6 +26,7 @@
       expect(block.scroll()).toEqual(123);
     });
   });
+
   describe('Update scroll status', function() {
     var block;
     block = void 0;
@@ -70,4 +72,5 @@
       return _results;
     });
   });
+
 }).call(this);

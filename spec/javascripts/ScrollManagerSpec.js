@@ -1,11 +1,15 @@
+
+/*
+  it 'should set block transistion value', ->
+    manager.rebuildScrollTable()
+    for i in [0..1]
+      manager.blockScroll(i)
+      expect( manager.blocks()[0].transition() ).toEqual( 0.02 )
+*/
+
 (function() {
-  /*
-    it 'should set block transistion value', ->
-      manager.rebuildScrollTable()
-      for i in [0..1]
-        manager.blockScroll(i)
-        expect( manager.blocks()[0].transition() ).toEqual( 0.02 )
-  */  describe('ScrollManager', function() {
+
+  describe('ScrollManager', function() {
     describe('object', function() {
       var manager;
       manager = void 0;
@@ -181,4 +185,5 @@
       });
     });
   });
+
 }).call(this);
