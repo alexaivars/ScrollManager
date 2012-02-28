@@ -224,7 +224,7 @@ ScrollManager = (function() {
   ScrollManager.prototype.init = function() {
     var block, _i, _len, _ref,
       _this = this;
-    _ref = $('#main').find(".scroll-block");
+    _ref = $('#main').find("section");
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       block = _ref[_i];
       this.blocks(new ScrollBlock(block));

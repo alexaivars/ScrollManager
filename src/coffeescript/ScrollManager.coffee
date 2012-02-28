@@ -204,7 +204,7 @@ class ScrollManager
   init:() ->
     
     # wrapp scrollable ellements
-    for block in $('#main').find(".scroll-block")
+    for block in $('#main').find("section")
       @blocks new ScrollBlock(block)
    
     

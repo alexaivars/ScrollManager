@@ -1,5 +1,6 @@
 html, body, #main, .scroll-block {
-  width: 100%; }
+  width: 100%;
+  font-size: 2em; }
 
 #main {
   width: 100%; }
