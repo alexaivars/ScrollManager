@@ -1,11 +1,1 @@
-html, body, #main, .scroll-block {
-  width: 100%;
-  font-size: 2em; }
-
-#main {
-  width: 100%; }
-
-.scroll-block {
-  height: 200px;
-  width: 100%;
-  border: 1px solid red; }
+html,body,#main,.scroll-block,.scroll-section{width:100%;font-size:2em}#main{width:100%}.scroll-block,.scroll-section{height:200px;width:100%;border:1px solid red}.scroll-block.background{background-image:url("../img/robots.jpg")}

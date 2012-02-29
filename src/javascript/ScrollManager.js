@@ -29,7 +29,9 @@
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-var $, ScrollBlock, ScrollManager;
+var $, BackgroundSection, ScrollManager, ScrollSection,
+  __hasProp = Object.prototype.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
 $ = jQuery;
 
@@ -96,50 +98,50 @@ if (!Array.prototype.indexOf) {
   };
 }
 
-ScrollBlock = (function() {
+ScrollSection = (function() {
 
-  ScrollBlock.prototype.$container = null;
+  ScrollSection.prototype.$container = null;
 
-  function ScrollBlock(elm) {
+  function ScrollSection(elm) {
     this.$container = elm instanceof jQuery ? elm : $(elm);
     this.init();
     return;
   }
 
-  ScrollBlock.prototype.init = function() {
+  ScrollSection.prototype.init = function() {
     var _scroll, _transition;
     this.$container.css({
       position: "fixed",
-      display: "block",
+      display: "section",
       height: this.$container.height()
     });
     _scroll = this.$container.data("scroll");
     this.scroll = function(value) {
-      if (value !== void 0) _scroll = Math.max(0, value);
+      if (value != null) _scroll = Math.max(0, value);
       return _scroll;
     };
     _transition = 0;
     this.transition = function(value) {
-      if (value !== void 0) {
+      if (value != null) {
         _transition = Math.min(1, Math.max(0, value));
-        this.$container.html(_transition);
+        this.ontransition(_transition);
       }
       return _transition;
     };
   };
 
-  ScrollBlock.prototype.top = function(y, o) {
-    if (y !== void 0) {
+  ScrollSection.prototype.top = function(y, o) {
+    if (y != null) {
       this.$container.css({
         top: y
       });
-      if (o !== void 0) this.transition(o / this.scroll());
+      if (o != null) this.transition(o / this.scroll());
     }
     return this.$container.position().top;
   };
 
-  ScrollBlock.prototype.height = function(height) {
-    if (height !== void 0) {
+  ScrollSection.prototype.height = function(height) {
+    if (height != null) {
       this.$container.css({
         height: Math.max(0, height)
       });
@@ -147,13 +149,51 @@ ScrollBlock = (function() {
     return this.$container.height();
   };
 
-  ScrollBlock.prototype.active = function(x) {
-    return this.activated.dispatch(this);
+  ScrollSection.prototype.ontransition = function(value) {
+    this.$container.html(value);
   };
 
-  return ScrollBlock;
+  return ScrollSection;
 
 })();
+
+BackgroundSection = (function(_super) {
+
+  __extends(BackgroundSection, _super);
+
+  BackgroundSection.prototype.image = null;
+
+  function BackgroundSection(elm) {
+    BackgroundSection.__super__.constructor.call(this, elm);
+    return;
+  }
+
+  BackgroundSection.prototype.init = function() {
+    var _this = this;
+    this.image = new Image();
+    this.image.onload = function() {
+      return _this.loaded();
+    };
+    this.image.src = this.$container.css('background-image').replace(/"/g, "").replace(/url\(|\)$/ig, "");
+    BackgroundSection.__super__.init.apply(this, arguments);
+  };
+
+  BackgroundSection.prototype.ontransition = function() {
+    var y;
+    if (this.image.height === 0) return;
+    y = this.transition() * (this.height() - this.image.height);
+    return this.$container.css({
+      backgroundPosition: "0 " + y + "px"
+    });
+  };
+
+  BackgroundSection.prototype.loaded = function() {
+    this.onTransition();
+  };
+
+  return BackgroundSection;
+
+})(ScrollSection);
 
 ScrollManager = (function() {
 
@@ -170,20 +210,20 @@ ScrollManager = (function() {
   ScrollManager.prototype.options = void 0;
 
   function ScrollManager(options) {
-    var index, _blocks, _container, _dist;
+    var index, _container, _dist, _sections;
     this.options = {
       align: ScrollManager.ALIGN_TOP,
       debug: false
     };
     for (index in this.options) {
-      if (options && typeof options[index] !== "undefined") {
+      if ((options != null) && (options[index] != null)) {
         this.options[index] = options[index];
       }
     }
     ScrollManager.WINDOW_HEIGHT = $(window).height();
     _container = void 0;
     this.container = function() {
-      if (_container === void 0) {
+      if (_container == null) {
         _container = $("<div class='scroll-manager'></div>");
         _container.css({
           height: ScrollManager.WINDOW_HEIGHT
@@ -192,22 +232,22 @@ ScrollManager = (function() {
       }
       return _container;
     };
-    _blocks = [];
-    this.blocks = function(block) {
-      if (block && block instanceof ScrollBlock) {
-        _blocks.push(block);
-        block.$container.appendTo(this.container());
+    _sections = [];
+    this.sections = function(section) {
+      if (section && section instanceof ScrollSection) {
+        _sections.push(section);
+        section.$container.appendTo(this.container());
         return this.setHeight();
-      } else if (block) {
-        throw new TypeError("expected ScrollBlock object");
+      } else if (section) {
+        throw new TypeError("expected ScrollSection object");
       } else {
-        return _blocks;
+        return _sections;
       }
     };
     _dist = void 0;
     this.pageDist = function(y) {
       var a, b, x;
-      if (y !== void 0) {
+      if (y != null) {
         x = this.scrollTable[y];
         a = this.scrollTable.indexOf(x);
         b = this.scrollTable.lastIndexOf(x);
@@ -222,12 +262,18 @@ ScrollManager = (function() {
   }
 
   ScrollManager.prototype.init = function() {
-    var block, _i, _len, _ref,
+    var section, _i, _len, _ref,
       _this = this;
     _ref = $('#main').find("section");
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      block = _ref[_i];
-      this.blocks(new ScrollBlock(block));
+      section = _ref[_i];
+      switch ($(section).data("class")) {
+        case "BackgroundSection":
+          this.sections(new BackgroundSection(section));
+          break;
+        default:
+          this.sections(new ScrollSection(section));
+      }
     }
     $(window).scroll(function(event) {
       return _this.onWindowScroll(event);
@@ -239,31 +285,31 @@ ScrollManager = (function() {
   };
 
   ScrollManager.prototype.setHeight = function() {
-    var block, _height, _i, _len, _ref;
+    var section, _height, _i, _len, _ref;
     _height = 0;
-    _ref = this.blocks();
+    _ref = this.sections();
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      block = _ref[_i];
-      _height += block.height() + block.scroll();
+      section = _ref[_i];
+      _height += section.height() + section.scroll();
     }
-    if (this.blocks()[this.blocks().length - 1]) {
-      _height -= this.blocks()[this.blocks().length - 1].height();
+    if (this.sections()[this.sections().length - 1]) {
+      _height -= this.sections()[this.sections().length - 1].height();
     }
     _height += ScrollManager.WINDOW_HEIGHT;
     return this.container().height(_height);
   };
 
   ScrollManager.prototype.rebuildScrollTable = function() {
-    var block, f, h, i, s, y, _i, _j, _len, _len2, _ref, _ref2;
+    var f, h, i, s, section, y, _i, _j, _len, _len2, _ref, _ref2;
     if (this.options.align === ScrollManager.ALIGN_CENTER) {
       this.scrollTable = [];
       y = Math.round(ScrollManager.WINDOW_HEIGHT * 0.5);
       f = true;
-      _ref = this.blocks();
+      _ref = this.sections();
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        block = _ref[_i];
-        s = block.scroll();
-        h = block.height() * 0.5;
+        section = _ref[_i];
+        s = section.scroll();
+        h = section.height() * 0.5;
         if (f !== true) {
           for (i = 1; 1 <= h ? i <= h : i >= h; 1 <= h ? i++ : i--) {
             this.scrollTable.push(y - i + 1);
@@ -281,11 +327,11 @@ ScrollManager = (function() {
     } else {
       this.scrollTable = [];
       y = 0;
-      _ref2 = this.blocks();
+      _ref2 = this.sections();
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-        block = _ref2[_j];
-        s = block.scroll();
-        h = block.height();
+        section = _ref2[_j];
+        s = section.scroll();
+        h = section.height();
         for (i = 1; 1 <= s ? i <= s : i >= s; 1 <= s ? i++ : i--) {
           this.scrollTable.push(y);
         }
@@ -298,41 +344,41 @@ ScrollManager = (function() {
   };
 
   ScrollManager.prototype.render = function() {
-    var block, c, y, _i, _j, _len, _len2, _ref, _ref2;
+    var c, section, y, _i, _j, _len, _len2, _ref, _ref2;
     y = this.scrollValue;
     c = Math.round(ScrollManager.WINDOW_HEIGHT * 0.5);
     if (this.options.align === ScrollManager.ALIGN_CENTER) {
-      _ref = this.blocks();
+      _ref = this.sections();
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        block = _ref[_i];
-        if (y < c - block.height() * 0.5) {
-          block.top(y, block.scroll());
-        } else if (y === c - block.height() * 0.5) {
-          block.top(y, this.pageDist());
+        section = _ref[_i];
+        if (y < c - section.height() * 0.5) {
+          section.top(y, section.scroll());
+        } else if (y === c - section.height() * 0.5) {
+          section.top(y, this.pageDist());
         } else {
-          block.top(y, 0);
+          section.top(y, 0);
         }
-        y += block.height();
+        y += section.height();
       }
     } else {
-      _ref2 = this.blocks();
+      _ref2 = this.sections();
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-        block = _ref2[_j];
+        section = _ref2[_j];
         if (y < 0) {
-          block.top(y, block.scroll());
+          section.top(y, section.scroll());
         } else if (y === 0) {
-          block.top(y, this.pageDist());
+          section.top(y, this.pageDist());
         } else {
-          block.top(y, 0);
+          section.top(y, 0);
         }
-        y += block.height();
+        y += section.height();
       }
     }
   };
 
   ScrollManager.prototype.pageScroll = function(y) {
     var x;
-    if (y === void 0) y = $(window).scrollTop();
+    if (y == null) y = $(window).scrollTop();
     y = Math.max(0, y);
     if (y < 0 || y > this.scrollTable.length) {
       this.scrollValue = -y;

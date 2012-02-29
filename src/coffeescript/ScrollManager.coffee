@@ -88,10 +88,10 @@ unless Array::indexOf
 
 ################################################################################
 #
-# Class: ScrollBlock
+# Class: ScrollSection
 #
 ################################################################################
-class ScrollBlock
+class ScrollSection
 
   $container: null
   
@@ -106,44 +106,74 @@ class ScrollBlock
   init: () ->
     @$container.css({
       position:"fixed"
-      display:"block"
-      # width:@$container.width()
+      display:"section"
       height:@$container.height()
-      # top: $(window).height()
     })
 
     # private data accessors
     _scroll = @$container.data("scroll")
     @scroll = (value) ->
-      if value != undefined
+      if value?
         _scroll = Math.max(0,value)
       return _scroll
 
     _transition = 0
     @transition = (value) ->
-      if value != undefined
+      if value?
         _transition = Math.min(1,Math.max(0,value))
-        @$container.html( _transition )
+        @ontransition( _transition )
       return _transition
 
     return
 
   top: (y,o) ->
-    if y != undefined
+    if y?
       @$container.css { top: y }
-      if o != undefined
+      if o?
         @transition o / @scroll()
     return @$container.position().top
 
   height: (height) ->
-    if height != undefined
+    if height?
       @$container.css { height: Math.max(0,height) }
-
     return @$container.height()
-  active: (x) ->
-    @activated.dispatch(@)
 
+  ontransition: ( value ) ->
+    @$container.html( value )
+    return
+
+################################################################################
+#
+# Class: ScrollSection
+#
+################################################################################
+
+
+class BackgroundSection extends ScrollSection
     
+  image: null
+
+  constructor: (elm) ->
+    super elm
+    return
+
+  init: () ->
+    @image = new Image()
+    @image.onload = () => @loaded()
+    @image.src = @$container.css('background-image').replace(/"/g,"").replace(/url\(|\)$/ig, "")
+    super
+    return
+
+  ontransition: () ->
+    if @image.height == 0 then return
+    y = @transition() * ( @height() - @image.height )
+    @$container.css({
+      backgroundPosition: "0 #{ y }px"
+    })
+
+  loaded: () ->
+    @onTransition()
+    return
 
 ################################################################################
 #
@@ -166,12 +196,12 @@ class ScrollManager
       debug: false
 
     for index of @options
-      @options[index] = options[index]  if options and typeof options[index] isnt "undefined"
+      @options[index] = options[index]  if options? and  options[index]?
 
     ScrollManager.WINDOW_HEIGHT = $(window).height()
     _container = undefined
     @container = () ->
-      if _container == undefined
+      unless _container?
         _container = $("<div class='scroll-manager'></div>")
         _container.css({
           height: ScrollManager.WINDOW_HEIGHT
@@ -179,18 +209,18 @@ class ScrollManager
         _container.appendTo( $('body') )
       return _container
 
-    _blocks = []
-    @blocks = (block) ->
-      if block && block instanceof ScrollBlock
-        _blocks.push block
-        block.$container.appendTo( @container() )
+    _sections = []
+    @sections = (section) ->
+      if section && section instanceof ScrollSection
+        _sections.push section
+        section.$container.appendTo( @container() )
         @setHeight()
-      else if block then throw new TypeError("expected ScrollBlock object")
-      else return _blocks
+      else if section then throw new TypeError("expected ScrollSection object")
+      else return _sections
 
     _dist = undefined
     @pageDist = (y) ->
-      if y != undefined
+      if y?
         x = @scrollTable[y]
         a = @scrollTable.indexOf(x)
         b = @scrollTable.lastIndexOf(x)
@@ -204,8 +234,12 @@ class ScrollManager
   init:() ->
     
     # wrapp scrollable ellements
-    for block in $('#main').find("section")
-      @blocks new ScrollBlock(block)
+    for section in $('#main').find("section")
+      switch $(section).data("class")
+        when "BackgroundSection"
+          @sections new BackgroundSection(section)
+        else
+          @sections new ScrollSection(section)
    
     
     # add event listners
@@ -213,15 +247,15 @@ class ScrollManager
     $(window).resize (event) => @onWindowResize(event)
     $(window).resize()
     # add singal listners
-    # for block in @blocks
-    # @blocks[0].activated.add (target) => @onActivated()
+    # for section in @sections
+    # @sections[0].activated.add (target) => @onActivated()
 
     return
   setHeight: () ->
     _height = 0
-    for block in @blocks()
-      _height += block.height() + block.scroll()
-    _height -= @blocks()[@blocks().length - 1].height() if @blocks()[@blocks().length - 1]
+    for section in @sections()
+      _height += section.height() + section.scroll()
+    _height -= @sections()[@sections().length - 1].height() if @sections()[@sections().length - 1]
     _height += ScrollManager.WINDOW_HEIGHT
     @container().height( _height )
 
@@ -230,9 +264,9 @@ class ScrollManager
       @scrollTable = []
       y = Math.round( ScrollManager.WINDOW_HEIGHT * 0.5 )
       f = true
-      for block in @blocks()
-        s = block.scroll()
-        h = block.height() * 0.5
+      for section in @sections()
+        s = section.scroll()
+        h = section.height() * 0.5
         if f != true then for i in [1..h]
           @scrollTable.push y - i + 1
           # console.log "I" + (@scrollTable.length - 1) + ":" + @scrollTable[ @scrollTable.length - 1]
@@ -250,9 +284,9 @@ class ScrollManager
     else
       @scrollTable = []
       y = 0
-      for block in @blocks()
-        s = block.scroll()
-        h = block.height()
+      for section in @sections()
+        s = section.scroll()
+        h = section.height()
         for i in [1..s]
           @scrollTable.push y
         for i in [1..h]
@@ -271,28 +305,28 @@ class ScrollManager
     c = Math.round( ScrollManager.WINDOW_HEIGHT * 0.5 )
 
     if @options.align == ScrollManager.ALIGN_CENTER
-      for block in @blocks()
-        if y < c - block.height() * 0.5
-          block.top(y,block.scroll())
-        else if y == c - block.height() * 0.5
-          block.top(y,@pageDist())
+      for section in @sections()
+        if y < c - section.height() * 0.5
+          section.top(y,section.scroll())
+        else if y == c - section.height() * 0.5
+          section.top(y,@pageDist())
         else
-          block.top(y,0)
-        y += block.height()
+          section.top(y,0)
+        y += section.height()
     else
-      for block in @blocks()
+      for section in @sections()
         if y < 0
-          block.top(y,block.scroll())
+          section.top(y,section.scroll())
         else if y == 0
-          block.top(y,@pageDist())
+          section.top(y,@pageDist())
         else
-          block.top(y,0)
-        y += block.height()
+          section.top(y,0)
+        y += section.height()
 
     return
   
   pageScroll:(y) ->
-    if y == undefined
+    unless y?
       y = $(window).scrollTop()
     
     y = Math.max( 0, y )
